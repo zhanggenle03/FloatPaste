@@ -55,8 +55,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.viewpager:viewpager:1.0.0'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
     // Material 组件（替代 QMUI 的控件）
     implementation 'com.google.android.material:material:1.11.0'
     // QMUI 仍暂时保留：styles.xml 里还有 ?attr/qmui_* 引用，待阶段 5 清理主题后再移除
