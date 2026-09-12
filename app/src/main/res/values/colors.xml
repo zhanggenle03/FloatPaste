@@ -16,6 +16,9 @@
 -->
 
 <resources>
+    <!-- 贴图编辑态强调色：正在编辑的贴图高亮边框 + 编辑条不透明度进度条（淡紫） -->
+    <color name="sticker_accent">#C9A7EB</color>
+
     <!-- common -->
     <color name="app_color_blue">#00A8E1</color>
     <color name="app_color_blue_disabled">#8000A8E1</color>

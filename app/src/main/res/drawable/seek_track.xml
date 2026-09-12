@@ -1,17 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  SeekBar 轨道（横向）。两个关键点：
+  1) progress 层必须包在 <clip> 里：layer-list 自己不做 level 裁剪，不包的话
+      进度层会铺满整条轨道，表现为「滑块两侧都是进度色」。
+  2) 每个 item 都要写 android:gravity：不写时层的 bounds 会被拉满 SeekBar 高度，
+      8dp 的细条会被拉成 32dp 粗条。
+  background 色取半透明白 (#33FFFFFF)，在深色编辑条底上清晰可见；
+  进度色用 @color/sticker_accent（淡紫），与「正在编辑的贴图」高亮边框同色。
+-->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@android:id/background">
+    <item
+        android:id="@android:id/background"
+        android:gravity="center_vertical|fill_horizontal">
         <shape android:shape="rectangle">
             <corners android:radius="4dp" />
-            <solid android:color="#55333333" />
+            <solid android:color="#33FFFFFF" />
             <size android:height="8dp" />
         </shape>
     </item>
-    <item android:id="@android:id/progress">
-        <shape android:shape="rectangle">
-            <corners android:radius="4dp" />
-            <solid android:color="#FFCC33" />
-            <size android:height="8dp" />
-        </shape>
+    <item
+        android:id="@android:id/progress"
+        android:gravity="center_vertical|fill_horizontal">
+        <clip
+            android:clipOrientation="horizontal"
+            android:gravity="left">
+            <shape android:shape="rectangle">
+                <corners android:radius="4dp" />
+                <solid android:color="@color/sticker_accent" />
+                <size android:height="8dp" />
+            </shape>
+        </clip>
     </item>
 </layer-list>

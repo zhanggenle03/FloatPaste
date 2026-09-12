@@ -37,8 +37,12 @@ public class Settings {
 
     /** 缩放贴图：动作类型 */
     public static final String KEY_ZOOM_ACTION = "zoom_action";
-    /** 图标控制（默认）：单指拖拽 ScaleImage 改尺寸 */
-    public static final int ZOOM_ACTION_ICON = 0;
+    /** 手柄控制：仅右下角 ScaleImage 手柄（单指拖拽改尺寸） */
+    public static final int ZOOM_ACTION_HANDLE = 0;
+    /** 双指控制：仅两指捏合等比缩放（右下角手柄隐藏） */
+    public static final int ZOOM_ACTION_PINCH = 1;
+    /** 混合控制（默认）：手柄与双指同时可用 */
+    public static final int ZOOM_ACTION_BOTH = 2;
 
     /** 编辑贴图：动作类型 */
     public static final String KEY_EDIT_ACTION = "edit_action";
@@ -46,9 +50,9 @@ public class Settings {
     public static final int EDIT_ACTION_DOUBLE_TAP = 0;
 
     public static int getZoomAction(@androidx.annotation.Nullable Context context) {
-        if (context == null) return ZOOM_ACTION_ICON;
+        if (context == null) return ZOOM_ACTION_BOTH;
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                .getInt(KEY_ZOOM_ACTION, ZOOM_ACTION_ICON);
+                .getInt(KEY_ZOOM_ACTION, ZOOM_ACTION_BOTH);
     }
 
     public static void setZoomAction(@androidx.annotation.Nullable Context context, int action) {

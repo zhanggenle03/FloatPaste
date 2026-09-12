@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  贴图编辑条（底部固定）：双击贴图弹出，固定停靠在屏幕底部居中。
+  背景为 @drawable/bg_action_sheet（深色圆角），宽度 300dp，不跟随贴图移动，
+  因此不存在坐标换算，也就没有「呼出定位不准」的问题。
+
+  排版：三块内容，自上而下清晰分层 ——
+    ① 不透明度调节行（标签 + 轨道 + 百分比）
+    ② 细分隔线
+    ③ 操作按钮行：5 个等宽「图标在上、文字在下」按钮（保存 / 收起 / 关闭 / 关闭所有 / 完成）
+  旧版把所有按钮文字挤在一行并靠横向滚动容纳，点不准也难看；现改为等宽网格，
+  每格约 57dp x 57dp，满足 48dp 最小触摸目标，单手好点。
+
+  配色：白（常规）/ 红（破坏性：关闭、关闭所有）/ 黄（主操作：完成）；
+  进度条与贴图高亮边框同用 @color/sticker_accent（淡紫）。
+
+  扩展方式：后续新增编辑操作（画笔 / 裁剪 / 文字等），调用
+  SharePasteHelper.addEditBarAction(iconRes, textRes, action) 即可，
+  会自动生成同款图标按钮并显示在上方的扩展行（无扩展项时该行整体隐藏）。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_action_sheet"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="6dp">
+
+    <!-- ① 不透明度调节行 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/opacity"
+            android:textColor="#B3FFFFFF"
+            android:textSize="12sp" />
+
+        <SeekBar
+            android:id="@+id/opacitySeekBar"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:max="100"
+            android:progress="100"
+            android:splitTrack="false"
+            android:thumb="@drawable/seek_thumb"
+            android:thumbOffset="9dp"
+            android:progressDrawable="@drawable/seek_track" />
+
+        <TextView
+            android:id="@+id/opacityValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="40dp"
+            android:gravity="end"
+            android:text="100%"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- ② 分隔线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#26FFFFFF" />
+
+    <!-- ③-0 扩展操作行（后续画笔 / 裁剪等；无扩展项时由代码置为 GONE） -->
+    <HorizontalScrollView
+        android:id="@+id/editBarActionsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/editBarActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp" />
+    </HorizontalScrollView>
+
+    <!-- ③ 操作按钮行：5 个等宽图标按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <!-- 保存到相册：图片贴图存原图；文字贴图先转成图片再存 -->
+        <LinearLayout
+            android:id="@+id/editBarSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/bg_edit_action"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_action_save"
+                android:tint="#FFFFFF"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/editBarSaveLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:text="@string/sticker_edit_save"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 收起：隐藏贴图，在屏边显示可点击 / 可拖动的把手 -->
+        <LinearLayout
+            android:id="@+id/editBarCollapse"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/bg_edit_action"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_sticker_collapse"
+                android:tint="#FFFFFF"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:text="@string/sticker_action_collapse"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 关闭：仅关闭当前贴图 -->
+        <LinearLayout
+            android:id="@+id/editBarClose"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/bg_edit_action"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_sticker_close"
+                android:tint="#FF6B6B"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:text="@string/sticker_action_close"
+                android:textColor="#FF6B6B"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 关闭所有：清除屏幕上全部贴图 -->
+        <LinearLayout
+            android:id="@+id/editBarCloseAll"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/bg_edit_action"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_sticker_close_all"
+                android:tint="#FF6B6B"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:text="@string/sticker_action_close_all"
+                android:textColor="#FF6B6B"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- 完成：收起编辑条（主操作，用黄色强调） -->
+        <LinearLayout
+            android:id="@+id/editBarDone"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="6dp"
+            android:background="@drawable/bg_edit_action"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_check"
+                android:tint="#FFCC33"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:text="@string/sticker_edit_done"
+                android:textColor="#FFCC33"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
