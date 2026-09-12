@@ -14,7 +14,7 @@
         使其变为显式尺寸。之后 ScaleImage 拖拽直接修改该显式尺寸，
         match_parent 的内容自动填充。
     -->
-    <com.to3g.snipasteandroid.view.TextStickerView
+    <com.dropstar.floatpaste.view.TextStickerView
         android:id="@+id/textStickerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -29,13 +29,13 @@
             android:padding="6dp"
             android:gravity="start" />
 
-        <com.to3g.snipasteandroid.view.ScaleImage
+        <com.dropstar.floatpaste.view.ScaleImage
             android:id="@+id/scaleImage"
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:layout_gravity="bottom|end"
             android:src="@drawable/ic_scaleimage" />
 
-    </com.to3g.snipasteandroid.view.TextStickerView>
+    </com.dropstar.floatpaste.view.TextStickerView>
 
 </com.dd.ShadowLayout>
