@@ -26,6 +26,7 @@ import com.to3g.snipasteandroid.lib.Group;
 import com.to3g.snipasteandroid.lib.ScreenUtils;
 import com.to3g.snipasteandroid.lib.Settings;
 import com.to3g.snipasteandroid.lib.annotation.Widget;
+import com.to3g.snipasteandroid.lib.SharePasteHelper;
 
 @Widget(group = Group.Other, name = "设置")
 public class SettingsFragment extends BaseFragment {
@@ -207,48 +208,77 @@ public class SettingsFragment extends BaseFragment {
 
     /**
      * 手势动作项（chevron 行）：右侧 detail 显示当前选中的动作名；点击弹自绘单选弹窗选择动作。
-     * 当前每个手势仅 1 个可选动作（即当前正在用的手势），后续扩充时往 options/取值映射加项即可。
+     * 可选项统一由 {@link #gestureOptions(int)} / {@link #gestureValues(int)} 给出（两者下标一一对应），
+     * 以后再扩充动作只需同时往这两个数组里加一项。
      */
     private void addGestureActionItem(ViewGroup parent, int titleRes, int gestureType) {
         View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_setting_chevron, parent, false);
         ((TextView) row.findViewById(R.id.title)).setText(titleRes);
         TextView detail = row.findViewById(R.id.detail);
 
-        // 当前选中动作（取值 -> 文案）
-        int curVal = (gestureType == GESTURE_ZOOM)
-                ? Settings.getZoomAction(requireContext())
-                : Settings.getEditAction(requireContext());
-        CharSequence[] options;
-        int checked;
-        if (gestureType == GESTURE_ZOOM) {
-            options = new CharSequence[]{getString(R.string.zoom_action_icon)};
-            checked = (curVal == Settings.ZOOM_ACTION_ICON) ? 0 : -1;
-        } else {
-            options = new CharSequence[]{getString(R.string.edit_action_double_tap)};
-            checked = (curVal == Settings.EDIT_ACTION_DOUBLE_TAP) ? 0 : -1;
-        }
-        detail.setText(checked >= 0 ? options[checked] : "");
+        final CharSequence[] options = gestureOptions(gestureType);
+        final int[] values = gestureValues(gestureType);
+        detail.setText(options[Math.max(0, indexOf(values, gestureCurrentValue(gestureType)))]);
 
         row.setOnClickListener(v -> {
             AppLog.d("Settings", "gesture_action_click type=" + gestureType);
-            int cur = (gestureType == GESTURE_ZOOM)
-                    ? Settings.getZoomAction(requireContext())
-                    : Settings.getEditAction(requireContext());
-            int curIndex = (gestureType == GESTURE_ZOOM)
-                    ? ((cur == Settings.ZOOM_ACTION_ICON) ? 0 : -1)
-                    : ((cur == Settings.EDIT_ACTION_DOUBLE_TAP) ? 0 : -1);
-            DialogUtil.showSingleChoice(requireContext(), getString(titleRes), options, Math.max(curIndex, 0),
-                    (which, option) -> {
+            DialogUtil.showSingleChoice(requireContext(), getString(titleRes), options,
+                    Math.max(0, indexOf(values, gestureCurrentValue(gestureType))), (which, option) -> {
                         AppLog.d("Settings", "gesture_action_select type=" + gestureType + " which=" + which);
-                        if (gestureType == GESTURE_ZOOM) {
-                            Settings.setZoomAction(requireContext(), Settings.ZOOM_ACTION_ICON);
-                        } else {
-                            Settings.setEditAction(requireContext(), Settings.EDIT_ACTION_DOUBLE_TAP);
-                        }
+                        setGestureValue(gestureType, values[which]);
                         detail.setText(option);
+                        if (gestureType == GESTURE_ZOOM) {
+                            // 立即生效：已经在屏幕上的贴图马上切换右下角手柄的显隐
+                            SharePasteHelper.refreshZoomAction();
+                        }
                     });
         });
         parent.addView(row);
+    }
+
+    /** 手势可选动作的文案（下标与 {@link #gestureValues(int)} 一一对应） */
+    private CharSequence[] gestureOptions(int gestureType) {
+        if (gestureType == GESTURE_ZOOM) {
+            return new CharSequence[]{
+                    getString(R.string.zoom_action_handle),
+                    getString(R.string.zoom_action_pinch),
+                    getString(R.string.zoom_action_both)
+            };
+        }
+        return new CharSequence[]{getString(R.string.edit_action_double_tap)};
+    }
+
+    /** 手势可选动作的取值（下标与 {@link #gestureOptions(int)} 一一对应） */
+    private int[] gestureValues(int gestureType) {
+        if (gestureType == GESTURE_ZOOM) {
+            return new int[]{
+                    Settings.ZOOM_ACTION_HANDLE,
+                    Settings.ZOOM_ACTION_PINCH,
+                    Settings.ZOOM_ACTION_BOTH
+            };
+        }
+        return new int[]{Settings.EDIT_ACTION_DOUBLE_TAP};
+    }
+
+    private int gestureCurrentValue(int gestureType) {
+        return (gestureType == GESTURE_ZOOM)
+                ? Settings.getZoomAction(requireContext())
+                : Settings.getEditAction(requireContext());
+    }
+
+    private void setGestureValue(int gestureType, int value) {
+        if (gestureType == GESTURE_ZOOM) {
+            Settings.setZoomAction(requireContext(), value);
+        } else {
+            Settings.setEditAction(requireContext(), value);
+        }
+    }
+
+    private static int indexOf(int[] arr, int value) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] == value) return i;
+        }
+        return -1;
     }
 
     /** 其他：错误日志（含调试模式开关）、权限清单，均以与上面一致的列表项形式呈现。 */

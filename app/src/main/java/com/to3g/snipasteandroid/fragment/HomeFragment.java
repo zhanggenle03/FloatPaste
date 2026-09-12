@@ -80,10 +80,7 @@ public class HomeFragment extends BaseFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = HomeLayoutBinding.inflate(inflater, container, false);
-        binding.helpTextView.setText(getString(R.string.helpText,
-                getString(R.string.sticker_action_collapse),
-                getString(R.string.sticker_action_close),
-                getString(R.string.sticker_action_cancel)));
+        binding.helpTextView.setText(R.string.helpText);
         binding.pasteTextButton.setOnClickListener(v -> onPasteTextButtonClick());
         binding.pasteClipboardButton.setOnClickListener(v -> onPasteClickboardButtonClick());
         binding.albumButton.setOnClickListener(v -> onAlbumButtonClick());
@@ -322,8 +319,8 @@ public class HomeFragment extends BaseFragment {
             public void onScaleChange(float scaleFactor, float focusX, float focusY) {
             }
         };
+        SharePasteHelper.applyZoomActionToSticker(view);
         SharePasteHelper.attachOpacitySlider(getActivity(), path, imageOutterShadow);
-
         // 记录历史贴图（持久保存，内容去重；相册/拍照的源文件在 cache 目录，会被复制到持久目录）
         HistoryStore.addImage(requireContext(), new File(path));
 
@@ -424,6 +421,7 @@ public class HomeFragment extends BaseFragment {
             public void onScaleChange(float scaleFactor, float focusX, float focusY) {
             }
         };
+        SharePasteHelper.applyZoomActionToSticker(view);
         SharePasteHelper.attachOpacitySlider(getActivity(), tagName, imageOutterShadow);
     }
 

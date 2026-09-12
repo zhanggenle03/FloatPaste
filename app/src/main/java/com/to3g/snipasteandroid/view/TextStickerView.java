@@ -46,6 +46,8 @@ public class TextStickerView extends FrameLayout {
     private float downX, downY;
     private long downTime;
     private boolean selectMode = false;
+    /** 本轮触摸是否正在做两指捏合缩放（为 true 时独占事件，不再走拖拽/选择） */
+    private boolean pinchActive = false;
 
     // ---------- 双击 ----------
     private long lastDownTime = 0;
@@ -121,7 +123,16 @@ public class TextStickerView extends FrameLayout {
     // ===================== 触摸 =====================
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
         if (isTouchOnScaleImage(event)) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+        int masked = event.getActionMasked();
+        // 第二根手指落下 → 交给两指捏合缩放，拦截后续事件由本 View 消费
+        if (masked == MotionEvent.ACTION_POINTER_DOWN && !pinchActive
+                && SharePasteHelper.handlePinchGesture(tag, findBody(), event)) {
+            pinchActive = true;
+            removeCallbacks(longPressRunnable); // 捏合不可能是长按
+            return true;
+        }
+        if (pinchActive) return true;
+        if (masked == MotionEvent.ACTION_DOWN) {
             float rx = event.getRawX(), ry = event.getRawY();
             long now = System.currentTimeMillis();
             if (now - lastDownTime < DOUBLE_TAP_TIME
@@ -137,8 +148,24 @@ public class TextStickerView extends FrameLayout {
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        if (isTouchOnScaleImage(event)) return false;
-        switch (event.getActionMasked()) {
+        // 捏合进行中不得再走手柄判定分支：捏合时手指可能移到右下角手柄上方，若把手柄判定当成
+        // 「这一下不是给我的」而 return false，捏合会被腰斩 —— 贴图停在半途的变换里。
+        if (!pinchActive && isTouchOnScaleImage(event)) return false;
+        int masked = event.getActionMasked();
+        if (masked == MotionEvent.ACTION_POINTER_DOWN
+                && SharePasteHelper.handlePinchGesture(tag, findBody(), event)) {
+            pinchActive = true; // onInterceptTouchEvent 可能已处理过同一事件，handlePinchGesture 对它是幂等的
+        }
+        if (pinchActive) {
+            if (masked != MotionEvent.ACTION_POINTER_DOWN) {
+                SharePasteHelper.handlePinchGesture(tag, findBody(), event);
+            }
+            if (masked == MotionEvent.ACTION_UP || masked == MotionEvent.ACTION_CANCEL) {
+                pinchActive = false;
+            }
+            return true; // 捏合期间独占触摸：松手也不落到拖拽 / 长按选择逻辑
+        }
+        switch (masked) {
             case MotionEvent.ACTION_DOWN:  return onDown(event);
             case MotionEvent.ACTION_MOVE:  return onMove(event);
             case MotionEvent.ACTION_UP:
