@@ -1,12 +1,16 @@
 package com.to3g.snipasteandroid.fragment;
 
+import android.Manifest;
 import android.app.Dialog;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -23,6 +27,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
+import com.to3g.snipasteandroid.QDApplication;
 import com.to3g.snipasteandroid.R;
 import com.to3g.snipasteandroid.base.BaseFragment;
 import com.to3g.snipasteandroid.base.BaseRecyclerAdapter;
@@ -30,10 +35,12 @@ import com.to3g.snipasteandroid.base.RecyclerViewHolder;
 import com.to3g.snipasteandroid.databinding.FragmentHistoryBinding;
 import com.to3g.snipasteandroid.lib.AppLog;
 import com.to3g.snipasteandroid.lib.DialogUtil;
+import com.to3g.snipasteandroid.lib.GallerySaver;
 import com.to3g.snipasteandroid.lib.Group;
 import com.to3g.snipasteandroid.lib.HistoryStore;
 import com.to3g.snipasteandroid.lib.ScreenUtils;
 import com.to3g.snipasteandroid.lib.SharePasteHelper;
+import com.to3g.snipasteandroid.lib.TextBitmapUtil;
 import com.to3g.snipasteandroid.lib.annotation.Widget;
 
 import java.io.File;
@@ -60,6 +67,15 @@ public class HistoryFragment extends BaseFragment {
             new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault());
     private static final int COLOR_SELECTED_BG = 0xFFEBF9FF;
     private static final int COLOR_SELECTED_STROKE = Color.parseColor("#00A8E1");
+    /** 保存到相册所需的存储权限请求码（仅 Android 9 及以下会用到） */
+    private static final int REQ_SAVE_STORAGE = 0x5A1E;
+
+    /** 主线程 Handler：保存是 IO，Toast 需回主线程弹出 */
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    /** 因缺少存储权限被中断、待授权后自动重试保存的记录 */
+    private HistoryStore.HistoryItem pendingSaveItem;
+    /** 历史记录保存是否进行中：防止连点排队多次落盘 */
+    private boolean savingHistory = false;
 
     private FragmentHistoryBinding binding;
     private final List<HistoryStore.HistoryItem> allItems = new ArrayList<>();
@@ -180,14 +196,17 @@ public class HistoryFragment extends BaseFragment {
         int opsVisibility = selectingMode ? View.GONE : View.VISIBLE;
         holder.getView(R.id.btnDetail).setVisibility(opsVisibility);
         holder.getView(R.id.btnRepaste).setVisibility(opsVisibility);
+        holder.getView(R.id.btnSave).setVisibility(opsVisibility);
         holder.getView(R.id.btnDelete).setVisibility(opsVisibility);
         if (selectingMode) {
             holder.getView(R.id.btnDetail).setOnClickListener(null);
             holder.getView(R.id.btnRepaste).setOnClickListener(null);
+            holder.getView(R.id.btnSave).setOnClickListener(null);
             holder.getView(R.id.btnDelete).setOnClickListener(null);
         } else {
             holder.getView(R.id.btnDetail).setOnClickListener(v -> showDetail(item));
             holder.getView(R.id.btnRepaste).setOnClickListener(v -> rePaste(item));
+            holder.getView(R.id.btnSave).setOnClickListener(v -> saveToGallery(item));
             holder.getView(R.id.btnDelete).setOnClickListener(v -> confirmDelete(item));
         }
 
@@ -353,6 +372,99 @@ public class HistoryFragment extends BaseFragment {
             SharePasteHelper.pasteImageFromFile(requireActivity(), f.getAbsolutePath());
         } else if (item.text != null && !item.text.trim().isEmpty()) {
             SharePasteHelper.floatText(requireActivity(), item.text);
+        }
+    }
+
+    // ===================== 保存到相册 =====================
+
+    /**
+     * 保存这条记录到系统相册（Pictures/Snipaste）。
+     * 图片记录按原始字节拷贝（不重新编码，保留画质）；文字记录先渲染成图片再存。
+     * Android 9 及以下写公共目录需要存储权限，未授权时先申请，授权通过后自动续跑。
+     */
+    private void saveToGallery(HistoryStore.HistoryItem item) {
+        if (item == null || !isAdded()) return;
+        // 防重入：上一次保存还没结束就忽略这次点击（避免连点排队多次落盘）
+        if (savingHistory) return;
+        if (GallerySaver.needsStoragePermission() && !GallerySaver.hasStoragePermission(requireContext())) {
+            pendingSaveItem = item;
+            Toast.makeText(requireContext(), R.string.save_sticker_need_permission, Toast.LENGTH_LONG).show();
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_SAVE_STORAGE);
+            return;
+        }
+        doSaveToGallery(item);
+    }
+
+    private void doSaveToGallery(HistoryStore.HistoryItem item) {
+        if (item == null || !isAdded()) return;
+        // 用 ApplicationContext：Fragment 已 detach 时 requireContext() 会抛异常，
+        // 而 Toast / 落盘都不需要 Activity，用 Application 上下文最稳。
+        Context appCtx = QDApplication.getContext();
+        final Context appContext = appCtx != null ? appCtx : requireContext().getApplicationContext();
+        final boolean isImage = HistoryStore.TYPE_IMAGE.equals(item.type);
+
+        File srcFile = null;
+        Bitmap textBitmap = null;
+        String fileName;
+        if (isImage) {
+            srcFile = item.imageFile(appContext);
+            if (!srcFile.exists()) {
+                Toast.makeText(appContext, R.string.file_access_failed, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            // 历史图片按内容 md5 命名且统一挂 .jpg 后缀，内容却可能是 PNG：按真实格式决定扩展名
+            fileName = GallerySaver.newFileName(GallerySaver.detectExtension(srcFile));
+        } else {
+            if (item.text == null || item.text.trim().isEmpty()) return;
+            // 文字记录没有源文件，渲染成与文字贴图同款外观的位图（#e3e3e3 底 + 黑字）
+            textBitmap = TextBitmapUtil.create(appContext, item.text);
+            fileName = GallerySaver.newFileName();
+        }
+
+        final File src = srcFile;
+        final Bitmap bitmap = textBitmap;
+        final String name = fileName;
+
+        // ① 立即反馈：落盘可能耗时（大图 IO / 文字渲染出的长图），先提示再干活，
+        //    否则用户点完看不到任何反应。Toast 用 ApplicationContext，Fragment 销毁也不会崩。
+        savingHistory = true;
+        Toast.makeText(appContext, R.string.save_sticker_saving, Toast.LENGTH_SHORT).show();
+
+        // ② 落盘是 IO（大图可能耗时），放后台线程；整体包 try/catch ——
+        //    异常时线程静默死掉就变成「完全无反馈」，这里兜底成「保存失败」。
+        new Thread(() -> {
+            boolean ok = false;
+            try {
+                ok = isImage
+                        ? GallerySaver.saveImageFile(appContext, src, name)
+                        : GallerySaver.saveBitmap(appContext, bitmap); // 按内容自动选 JPEG/PNG
+                AppLog.d(TAG, "保存历史记录到相册 type=" + item.type + " 成功=" + ok
+                        + (isImage ? " 文件=" + name : ""));
+            } catch (Throwable t) {
+                AppLog.e(TAG, "保存历史记录到相册异常 type=" + item.type, t);
+                ok = false;
+            }
+            final boolean result = ok;
+            mainHandler.post(() -> {
+                savingHistory = false;
+                Toast.makeText(appContext,
+                        result ? R.string.save_sticker_success : R.string.save_sticker_failed,
+                        Toast.LENGTH_SHORT).show();
+            });
+        }, "history-save").start();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQ_SAVE_STORAGE) return;
+        HistoryStore.HistoryItem item = pendingSaveItem;
+        pendingSaveItem = null;
+        // 授权通过则自动续跑这次保存；被拒绝就到此为止（下次点击会再次申请）
+        if (item != null && grantResults.length > 0
+                && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            doSaveToGallery(item);
         }
     }
 

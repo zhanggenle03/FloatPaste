@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.Manifest;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,7 +26,7 @@ import java.util.Objects;
 @Widget(group = Group.Other, name = "权限清单")
 public class PermissionListFragment extends BaseFragment {
 
-    private enum PermType { OVERLAY, CAMERA, CLIPBOARD }
+    private enum PermType { OVERLAY, CAMERA, STORAGE, CLIPBOARD }
 
     private FragmentPermissionListBinding binding;
 
@@ -65,6 +66,7 @@ public class PermissionListFragment extends BaseFragment {
         PermissionItem[] items = new PermissionItem[]{
                 new PermissionItem(getString(R.string.perm_overlay_title), getString(R.string.perm_overlay_desc), PermType.OVERLAY),
                 new PermissionItem(getString(R.string.perm_camera_title), getString(R.string.perm_camera_desc), PermType.CAMERA),
+                new PermissionItem(getString(R.string.perm_storage_title), getString(R.string.perm_storage_desc), PermType.STORAGE),
                 new PermissionItem(getString(R.string.perm_clipboard_title), getString(R.string.perm_clipboard_desc), PermType.CLIPBOARD),
         };
         for (PermissionItem item : items) {
@@ -108,6 +110,17 @@ public class PermissionListFragment extends BaseFragment {
             boolean granted = Settings.canDrawOverlays(requireContext());
             textRes = granted ? R.string.perm_status_granted : R.string.perm_status_denied;
             colorRes = granted ? R.color.perm_status_granted : R.color.perm_status_denied;
+        } else if (type == PermType.STORAGE) {
+            // 保存贴图到相册：Android 10+ 分区存储无需权限，仅 Android 9 及以下需要
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                textRes = R.string.perm_status_not_required;
+                colorRes = R.color.perm_status_not_required;
+            } else {
+                boolean granted = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        == PackageManager.PERMISSION_GRANTED;
+                textRes = granted ? R.string.perm_status_granted : R.string.perm_status_denied;
+                colorRes = granted ? R.color.perm_status_granted : R.color.perm_status_denied;
+            }
         } else {
             // 剪切板：系统隐私记录，无需授权
             textRes = R.string.perm_status_not_required;

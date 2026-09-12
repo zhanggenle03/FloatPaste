@@ -99,6 +99,23 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/btnSave"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_btn_action_blue"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_action_save"
+                    android:tint="@color/app_color_blue"
+                    android:contentDescription="@string/sticker_edit_save" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/btnDelete"
                 android:layout_width="36dp"
                 android:layout_height="36dp"

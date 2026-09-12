@@ -27,8 +27,15 @@
     <string name="clear_text">清除</string>
     <string name="close_all_stickers">关闭所有贴图</string>
     <string name="sticker_action_collapse">收起</string>
-    <string name="sticker_action_close">关闭贴图</string>
-    <string name="sticker_action_cancel">取消</string>
+    <string name="sticker_action_close">关闭</string>
+    <string name="sticker_action_close_all">关闭所有</string>
+    <string name="sticker_edit_done">完成</string>
+    <string name="sticker_edit_save">保存</string>
+    <string name="save_sticker_success">已保存到相册</string>
+    <string name="save_sticker_failed">保存失败</string>
+    <string name="save_sticker_need_permission">保存到相册需要存储权限，请授权后再次点击「保存」</string>
+    <string name="save_sticker_saving">正在保存…</string>
+    <string name="save_sticker_saving_label">保存中</string>
     <string name="button_clear_text">清空</string>
     <string name="clear_all_text">关闭所有文字</string>
     <string name="paste_title_2">贴图片</string>
@@ -38,7 +45,7 @@
     <string name="setting">设置</string>
     <string name="help">帮助</string>
     <string name="opacity">不透明度</string>
-    <string name="helpText">双击浮窗可调整不透明度；把贴图拖出屏幕边缘，底部会弹出「%1$s / %2$s / %3$s」。</string>
+    <string name="helpText">双击浮窗可编辑贴图（不透明度 / 保存 / 收起 / 关闭）；贴图可自由拖出屏幕边缘。</string>
     <string name="test_activity">测试activity</string>
     <string name="blankContent">内容为空</string>
     <string name="textFloated">已悬浮</string>
@@ -99,7 +106,9 @@
     <string name="tile_guide_close">点击任意位置关闭</string>
     <string name="setting_zoom_sticker">缩放贴图</string>
     <string name="setting_edit_sticker">编辑贴图</string>
-    <string name="zoom_action_icon">图标控制</string>
+    <string name="zoom_action_handle">手柄控制</string>
+    <string name="zoom_action_pinch">双指控制</string>
+    <string name="zoom_action_both">混合控制</string>
     <string name="edit_action_double_tap">双击</string>
     <string name="setting_collapse_mode">收起形式</string>
     <string name="setting_history_enabled">记录历史贴图</string>
@@ -116,6 +125,8 @@
     <string name="perm_camera_desc">用于拍摄图片并贴到屏幕</string>
     <string name="perm_clipboard_title">剪切板</string>
     <string name="perm_clipboard_desc">在控制中心磁贴、接收分享时读取剪切板以实现快速贴图（系统隐私记录，无需授权）</string>
+    <string name="perm_storage_title">存储</string>
+    <string name="perm_storage_desc">在 Android 9 及以下，把贴图保存到相册需要该权限（Android 10 及以上系统无需授权）</string>
     <string name="perm_status_granted">已授权</string>
     <string name="perm_status_denied">未授权</string>
     <string name="perm_status_not_required">无需授权</string>

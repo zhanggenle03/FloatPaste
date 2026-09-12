@@ -12,7 +12,7 @@
     <string name="default_text">default text</string>
     <string name="floatingPermissionText">To use the floating window function, you need to grant the floating window permission.</string>
     <string name="help">help</string>
-    <string name="helpText">Double-click the floating window to adjust opacity; drag it off the screen edge and a \"%1$s / %2$s / %3$s\" sheet slides up from the bottom.</string>
+    <string name="helpText">Double-click the floating window to edit the sticker (opacity / save / collapse / close); stickers can be dragged past the screen edge.</string>
     <string name="needFloatingPermission">floating window permission needed</string>
     <string name="opacity">opacity</string>
     <string name="pasteSectionTitle1">float text</string>
@@ -38,9 +38,20 @@
     <string name="collapse_mode_strip">Edge bar</string>
     <string name="sticker_action_collapse">Collapse</string>
     <string name="sticker_action_close">Close</string>
-    <string name="sticker_action_cancel">Cancel</string>
+    <string name="sticker_action_close_all">Close all</string>
+    <string name="sticker_edit_done">Done</string>
+    <string name="sticker_edit_save">Save</string>
+    <string name="save_sticker_success">Saved to album</string>
+    <string name="save_sticker_failed">Failed to save</string>
+    <string name="save_sticker_need_permission">Storage permission is required to save to the album. Please grant it and tap Save again.</string>
+    <string name="save_sticker_saving">Saving…</string>
+    <string name="save_sticker_saving_label">Saving</string>
+    <string name="perm_storage_title">Storage</string>
+    <string name="perm_storage_desc">Required to save stickers to the album on Android 9 and below (not needed on Android 10+).</string>
     <string name="setting_zoom_sticker">Zoom sticker</string>
     <string name="setting_edit_sticker">Edit sticker</string>
-    <string name="zoom_action_icon">Icon control</string>
+    <string name="zoom_action_handle">Handle control</string>
+    <string name="zoom_action_pinch">Two-finger control</string>
+    <string name="zoom_action_both">Mixed control</string>
     <string name="edit_action_double_tap">Double tap</string>
 </resources>
